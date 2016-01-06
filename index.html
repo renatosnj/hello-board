@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css"
+          rel="stylesheet" type="text/css">
+    <link href="http://pingendo.github.io/pingendo-bootstrap/themes/default/bootstrap.css"
+          rel="stylesheet" type="text/css">
+</head>
+
+<body>
+<div class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="text-center">Intel Galileo Speaks</h1>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div id="nao_suportado" class="alert alert-danger alert-dismissable hidden">
+                    <b>Seu navegador não suporta a WebSpeechAPI. Utilize o Chrome em sua versão
+                        mais nova.</b>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Respostas da Galileo</h2>
+                <ol id="resposta_da_galileo" class="lead list-unstyled text-left"></ol>
+            </div>
+            <div class="col-md-6">
+                <h2>Envio de Comandos</h2>
+
+                <form class="form-horizontal" id="formulario_comandos">
+                    <div class="form-group">
+                        <div class="col-sm-2">
+                            <label class="control-label">Comando</label>
+                        </div>
+                        <div class="col-sm-10">
+                            <input id="comando" autocomplete="off" type="text" class="form-control"
+                                   placeholder="Insira seu comando para a Galileo">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <a id="btn_reconhecimento" class="btn btn-danger hidden" onclick="reconhecer_io()">UsarReconhecimento
+                                <br>
+                            </a>
+                            <a class="btn btn-primary" onclick="enviarComando()">Enviar</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+
+    /**************************************************************************/
+    /*                CODIGO DE ENVIO E RECEBIMENTO DE COMANDOS               */
+    /**************************************************************************/
+    
+    // Criando variavel de acesso as funces da biblioteca Socket.io 
+    var socket = io();
+    
+    // Definindo o que fazer ao receber uma resposta da placa
+    socket.on('Resposta da Galileo', function (resposta) {
+        // limpa listagem das respostas anteriores
+        $('#resposta_da_galileo').empty();
+        $('#resposta_da_galileo').append($('<li>').text(resposta));
+        
+        // "verbaliza" a resposta
+        sintese.text = resposta;
+        speechSynthesis.speak(sintese);
+    });
+    
+    // Funcao para o envio do comando para a placa
+    function enviarComando(){
+        socket.emit('Comando para Galileo', $('#comando').val());
+    }
+
+    /**************************************************************************/
+    /*                    CODIGO DO RECONHECIMENTO DE VOZ                     */
+    /**************************************************************************/
+    
+    // Verficando a existencia de uma biblioteca de reconhecimento
+    window.SpeechRecognition = window.SpeechRecognition ||
+            window.webkitSpeechRecognition || null;
+            
+    // Checando viabilidade do reconhecimento de voz neste navegador
+    if (window.SpeechRecognition === null) {
+        // Exibindo alerta de incompatibilidade do navegador
+        document.getElementById('nao_suportado').classList.remove('hidden');
+        
+    } else {
+        /**
+        * Criando e configurando objeto de reconhecimento. Definindo o modo de
+        * reconhecimento continuo, lingua portuguesa, requerendo disponibilidade
+        * do reconheciento intermediario (explico melhor em 
+        * reconhecimento.onresult). Depois, prepara o ambiente de recimento
+        * atraves da funcao reset().
+        */
+        var reconhecendo;
+        var reconhecimento = new SpeechRecognition();
+        reconhecimento.continuous = true;
+        reconhecimento.lang = 'pt-BR';
+        reconhecimento.interim = true;
+        reset();
+        
+        // Definindo o que fazer quando o servico parar inesperadamente
+        reconhecimento.onend = reset;
+
+        /**
+        * Configurando o objeto para sintese de voz. O valor 'rate', refere-se a
+        * velocidade de reproducao da voz.
+        */
+        var sintese = new SpeechSynthesisUtterance();
+        sintese.text = "";
+        sintese.lang = 'pt-BR';
+        sintese.rate = 1.2;
+        
+        // Hanilitando botao de reconhecimento
+        document.getElementById('btn_reconhecimento').classList.remove('hidden');
+
+        // Definindo como tratar  resultado de um reconhecimento
+        reconhecimento.onresult = function (event) 
+        {
+            /** 
+            * Checando resultado do reconhecimento continuo. O reconhecimento 
+            * continuo dá dois tipos de resultados: o intermediario, onde o 
+            * usuário pode alterar o valor do reconhecimento anterior; e os 
+            * valores finais, onde aquele ja e o recnhecimento considerado como
+            * correto.Neste passo.Foi decidido utilizar os valores de 
+            * reconhecimento intermediario (interin).
+            */  
+            var interim = "";
+            for (var i = 0; i < event.results.length; ++i) {
+                interim = event.results[i][0].transcript;
+            }
+            
+            // Atribuindo comando ao formulario
+            $('#comando').val(interim);
+            
+            /**
+            * Como o reconhecimento esta em modo continuo, para que um comando
+            * seja enviado para o servidor ele deve ser precedido pela string
+            * "Galileu". Esta string foi escolhida por ser o resultado do 
+            * reconhecimento mais comum da verbalização de "Galileo". Tambem 
+            * para dar uma sensacao de personificacao do comando.
+            */
+            if (interim.search("Galileu") != -1) {
+                socket.emit('Comando para Galileo', interim);
+            }
+        }
+
+        // Definicoes iniciais do ambiente para o reconhecimento 
+        function reset() {
+            reconhecendo = false;
+            btn_reconhecimento.innerHTML = "Click para Falar";
+        }
+
+        // Funcao do botao de controle de reconhecimento da pagina
+        function reconhecer_io() {
+            if (reconhecendo) {
+                reconhecimento.stop();
+                reset();
+            } else {
+                reconhecimento.start();
+                reconhecendo = true;
+                btn_reconhecimento.innerHTML = "Parar reconhecimento";
+                $('#comando').val('');
+            }
+        }
+    }
+
+
+</script>
+</body>
+
+</html>

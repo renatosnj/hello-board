@@ -12,3 +12,6 @@
 
 # Ignore arquivos de Log¨
 *.log
+
+# Ignore arquivos temporários do editor de texto
+*~
