@@ -11,7 +11,7 @@ var fs = require('fs');
 var fileOptions = {encoding: 'ascii'};
 
 // Variavel auxiliar para testes fora da placa
-var dirname = "D:\\Desktop\\tmp promíscuo\\ACII\\Speech Galileo";
+var dirname = __dirname;
 var root = dirname + '/root';
 //var temp_url = dirname + '/temp.txt';
 
@@ -149,8 +149,8 @@ app.get('/', function (req, res) {
 });
 
 // Inicie o servidor ouvindo na porta 3000
-http.listen(3000, function () {
-    console.log('Servidor iniciado.\nAceitando requisicoes na porta 3000.');
+http.listen(process.env.PORT, process.env.IP, function () {
+    console.log('Servidor iniciado.\nAceitando requisicoes na porta '+ process.env.PORT +'.');
 });
 
 

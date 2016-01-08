@@ -4,12 +4,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-    <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
-    <link href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css"
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="//cdn.socket.io/socket.io-1.2.0.js"></script>
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css"
           rel="stylesheet" type="text/css">
-    <link href="http://pingendo.github.io/pingendo-bootstrap/themes/default/bootstrap.css"
+    <link href="//pingendo.github.io/pingendo-bootstrap/themes/default/bootstrap.css"
           rel="stylesheet" type="text/css">
 </head>
 
@@ -117,7 +117,7 @@
         * atraves da funcao reset().
         */
         var reconhecendo;
-        var reconhecimento = new SpeechRecognition();
+        var reconhecimento = new window.SpeechRecognition();
         reconhecimento.continuous = true;
         reconhecimento.lang = 'pt-BR';
         reconhecimento.interim = true;
@@ -130,7 +130,7 @@
         * Configurando o objeto para sintese de voz. O valor 'rate', refere-se a
         * velocidade de reproducao da voz.
         */
-        var sintese = new SpeechSynthesisUtterance();
+        var sintese = new window.SpeechSynthesisUtterance();
         sintese.text = "";
         sintese.lang = 'pt-BR';
         sintese.rate = 1.2;
