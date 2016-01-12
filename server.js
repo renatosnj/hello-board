@@ -148,11 +148,17 @@ app.get('/', function (req, res) {
     res.sendFile(dirname + '/index.html');
 });
 
-// Inicie o servidor ouvindo na porta 3000
-http.listen(process.env.PORT, process.env.IP, function () {
-    console.log('Servidor iniciado.\nAceitando requisicoes na porta '+ process.env.PORT +'.');
-});
-
+if(process.env.PORT !== undefined){
+    // Inicie o servidor ouvindo na porta 3000
+    http.listen(process.env.PORT, process.env.IP, function () {
+        console.log('Servidor iniciado.\nAceitando requisicoes na porta '+ process.env.PORT +'.');
+    });
+} else {
+    // Inicie o servidor ouvindo na porta 3000
+    http.listen(3000, function () {
+        console.log('Servidor iniciado.\nAceitando requisicoes na porta 3000.');
+    });
+}
 
 /******************************************************************************/
 /*                TRATANDO CONEXOES COM O SEVIDOR SOCKET.IO                   */
