@@ -5,7 +5,9 @@
 hello_board(function (arg) {
     var app = require('express')(),
         http = require('http').Server(app),
-        io = require('socket.io')(http);
+        io = require('socket.io')(http),
+        board = require('board.js');
+
     this.placa = {};
 
     io.on('connection', function (socket) {
