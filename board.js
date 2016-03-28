@@ -92,7 +92,7 @@ var setGpioStrong = function (gpio_nr) {
  * @param {function} callback - Uma funcao que se utilizara do valor do Sensor que sera passado por parametro
  * @return {string} Valor do sensor
  */
-exports.readSensor = function (gpio_nr, callback) {
+var readSensor = function (gpio_nr, callback) {
     var value,
         url;
     if (root === "") {
@@ -116,7 +116,7 @@ exports.readSensor = function (gpio_nr, callback) {
  * @param {string} gpio_nr - O numero do GPIO
  * @param {string} value - Valor  para ser escrito no GPIO
  */
-exports.writeGpio = function (gpio_nr, value) {
+var writeGpio = function (gpio_nr, value) {
     fs.writeFile(root + "/sys/class/gpio/gpio" + gpio_nr + "/value", value, fileOptions,
         function (err, data) {
             if (err) {
@@ -132,7 +132,7 @@ exports.writeGpio = function (gpio_nr, value) {
  * @param {function} callback - Uma funcao que se utilizara do valor do FPIO que sera passado por parametro
  * @return {string} Valor do GPIO
  */
-exports.readGpio = function (gpio_nr, callback) {
+var readGpio = function (gpio_nr, callback) {
     var value = "";
     fs.readFile("/sys/class/gpio/gpio" + gpio_nr + "/value", fileOptions,
         function (err, data) {
@@ -170,14 +170,14 @@ exports.inicializarPlaca = function () {
     console.log("Placa configurada com sucesso.");
 };
 exports.ligarLed = function () {
-    exports.writeGpio(led, '1');
+    writeGpio(led, '1');
     return "Ligando LED da Galileu";
 };
 exports.desligarLed = function () {
-    exports.writeGpio(led, '0');
+    writeGpio(led, '0');
     return "Desligando LED da Galileu";
 };
 exports.lerSensor = function (callback){
-    var valor = exports.readSensor(sensor,callback);
+    var valor = readSensor(sensor,callback);
     console.log(valor);
 };
