@@ -28,11 +28,12 @@ app.get('/debug', function (req, res) {
         "<link href=\"http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css\" rel=\"stylesheet\" type=\"text/css\">"+
         "<link href=\"http://pingendo.github.io/pingendo-bootstrap/themes/default/bootstrap.css\" rel=\"stylesheet\" type=\"text/css\">"+
         "</head><body>"+
-        "<div class=\"section\"><div class=\"container\"><div class=\"row\"><div class=\"col-md-12\"><div class=\"page-header\"><h1 contenteditable=\"true\">Hello Board <font color=\"#777777\"><span style=\"font-size: 23.4px; line-height: 23.4px;\">Debugger</span></font></h1></div></div></div></div></div><div class=\"section\"><div class=\"container\"><div class=\"row\"><div class=\"col-md-12\"><ul>LED:" +
-        + "Status do Led" +
-        "&gt;<br>Temperatura Atual:"+
-        "Status da Temperatura Atual&gt;" +
-        "</ul></div></div></div></div></body></html>");
+        "<div class=\"section\"><div class=\"container\"><div class=\"row\"><div class=\"col-md-12\"><div class=\"page-header\"><h1 contenteditable=\"true\">Hello Board <font color=\"#777777\"><span style=\"font-size: 23.4px; line-height: 23.4px;\">Debugger</span></font></h1></div></div></div></div></div><div class=\"section\"><div class=\"container\"><div class=\"row\"><div class=\"col-md-12\"><ul>LED:"
+        + board.lerLED()
+        + "<Status do LED>"
+        + "<br>Temperatura Atual:"
+        +  board.lerSensor()
+        + "</ul></div></div></div></div></body></html>");
     res.end();
 });
 
@@ -72,10 +73,8 @@ io.on('connection', function (socket) {
             io.emit('Resposta da Galileo', "Desligando LED da Galileu");
             
         } else if (comando === "galileu temperatura") {
-            board.lerSensor(function(valor){
-                io.emit('Resposta da Galileo', "A temperatura atual é " + valor
-                    + " graus.");
-            });
+            io.emit('Resposta da Galileo', "A temperatura atual é " + board.lerSensor()
+                + " graus.");
             
         } else {
             io.emit('Resposta da Galileo', "Galileo Não Entendeu");

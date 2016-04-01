@@ -92,22 +92,14 @@ var setGpioStrong = function (gpio_nr) {
  * @param {function} callback - Uma funcao que se utilizara do valor do Sensor que sera passado por parametro
  * @return {string} Valor do sensor
  */
-var readSensor = function (gpio_nr, callback) {
+var readSensor = function (gpio_nr) {
     var value,
         url;
     if (root === "") {
     } else {
         url = root + "/sys/class/gpio/gpio" + gpio_nr + "/value";
     }
-    fs.readFile(url, fileOptions,
-        function (err, data) {
-            if (err) {
-                console.log("Error reading gpio" + gpio_nr);
-            }
-            value = data;
-            callback(data);
-        }
-    );
+    value = fs.readFileSync(url,fileOptions);
     return value;
 };
 
@@ -132,18 +124,9 @@ var writeGpio = function (gpio_nr, value) {
  * @param {function} callback - Uma funcao que se utilizara do valor do FPIO que sera passado por parametro
  * @return {string} Valor do GPIO
  */
-var readGpio = function (gpio_nr, callback) {
-    var value = "";
-    fs.readFile("/sys/class/gpio/gpio" + gpio_nr + "/value", fileOptions,
-        function (err, data) {
-            if (err) {
-                console.log("Error reading gpio" + gpio_nr);
-            }
-            value = data;
-            callback(data);
-        }
-    );
-    return value;
+var readGpio = function (gpio_nr) {
+    var url = root + "/sys/class/gpio/gpio" + gpio_nr + "/value";
+    return fs.readFileSync(url,fileOptions);;
 };
 
 /**
@@ -177,7 +160,9 @@ exports.desligarLed = function () {
     writeGpio(led, '0');
     return "Desligando LED da Galileu";
 };
-exports.lerSensor = function (callback){
-    var valor = readSensor(sensor,callback);
-    console.log(valor);
+exports.lerSensor = function (){
+    return readSensor(sensor);
+};
+exports.lerLED = function () {
+    return readGpio(led);
 };
