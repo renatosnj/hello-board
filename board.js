@@ -126,7 +126,8 @@ var writeGpio = function (gpio_nr, value) {
  */
 var readGpio = function (gpio_nr) {
     var url = root + "/sys/class/gpio/gpio" + gpio_nr + "/value";
-    return fs.readFileSync(url,fileOptions);;
+    var retorno = fs.readFileSync(url,fileOptions);
+    return retorno;
 };
 
 /**
@@ -137,32 +138,46 @@ exports.inicializarPlaca = function () {
     exportGpio(mux);
     setGpioOut(mux);
     setGpioStrong(mux);
-    exports.writeGpio(mux, '1');
+    writeGpio(mux, '1');
 
     // Configurando LED
     exportGpio(led);
     setGpioOut(led);
-    exports.writeGpio(led, '0');
+    writeGpio(led, '0');
 
     // Configurando Sensor
     exportGpio(sensor);
     setGpioOut(sensor);
     setGpioStrong(sensor);
-    exports.writeGpio(sensor, "0");
+    writeGpio(sensor, "0");
 
     console.log("Placa configurada com sucesso.");
 };
-exports.ligarLed = function () {
+var ligarLed = function () {
     writeGpio(led, '1');
     return "Ligando LED da Galileu";
 };
-exports.desligarLed = function () {
+var desligarLed = function () {
     writeGpio(led, '0');
     return "Desligando LED da Galileu";
 };
-exports.lerSensor = function (){
-    return readSensor(sensor);
+var lerSensor = function () {
+    var temperatura = readSensor(sensor);
+    return 'A temperatura é ' + temperatura.trim() + ' graus Célcius';
 };
-exports.lerLED = function () {
-    return readGpio(led);
+var lerLED = function () {
+    if(readGpio(led) === '1'){
+        return 'O LED está ligado';
+    }else{
+        return 'O LED está desligado';
+    }
 };
+
+exports.comandos = {
+    'galileu desligar' : desligarLed,
+    'galileu ligar' : ligarLed,
+    'galileu temperatura' : lerSensor,
+    'galileu led': lerLED
+};
+
+exports.debugger = [lerLED,lerSensor];
