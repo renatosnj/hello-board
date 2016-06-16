@@ -61,7 +61,9 @@ if (process.env.PORT !== undefined) {
 io.on('connection', function (socket) {
     var idReceptor = 'Comando para Galileo',
         idResposta = 'Resposta da Galileo',
-        notFoundCommand = "Galileo Não Entendeu";
+        notFoundCommand = "Galileo Não Entendeu",
+        returnCommands = "Comandos da placa",
+        requestCommands = "Comandos";
 
     /**
      * Tratando um comando recebido
@@ -77,5 +79,19 @@ io.on('connection', function (socket) {
         } else {
             io.emit(idResposta, notFoundCommand);
         }
+    });
+
+    /**
+     * Tratando requisicao de comandos
+     */
+    socket.on(requestCommands, function () {
+        var retorno = {},
+        j = 1;
+        for (var i in board.comandos) {
+            retorno[j++] = i;
+        }
+        console.log(retorno);
+        io.emit(returnCommands, JSON.stringify(retorno));
+
     });
 });

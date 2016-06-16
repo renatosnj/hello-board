@@ -173,6 +173,15 @@ var lerLED = function () {
     }
 };
 
+exports.getComandos = function (){
+    return {
+        'galileu desligar' : desligarLed,
+        'galileu ligar' : ligarLed,
+        'galileu temperatura' : lerSensor,
+        'galileu led': lerLED
+    };
+};
+
 exports.comandos = {
     'galileu desligar' : desligarLed,
     'galileu ligar' : ligarLed,
