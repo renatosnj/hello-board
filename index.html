@@ -79,30 +79,57 @@
     // Criando variavel de acesso as funces da biblioteca Socket.io 
     var socket = io();
 
-    // Requerendo comandos da placa no servidor
-    $('#resposta_da_galileo').append($('<li>').text("Comandos NAO recebidos com Sucesso!"));
+    //
+    // Requerendo comandos que estao disponiveis na placa
+    //
     var boardCommands;
+    // ENVIO
     socket.emit('Comandos');
+    // RESPOSTA
     socket.on('Comandos da placa', function (resposta) {
         boardCommands = JSON.parse(resposta);
     });
-    
 
-    
-    // Funcao para o envio do comando para a placa
-    function enviarComando(){
-        socket.emit('Comando para Galileo', $('#comando').val());
+
+
+    function commandInBoard(command){
+        command = command.trim().toLowerCase();
+
+        for (var i in boardCommands) {
+            if (boardCommands[i] === command){
+                return true;
+            }
+        }
+        return false;
     }
-    // Definindo o que fazer ao receber uma resposta da placa
+
+
+    //
+    // Execucao de comandos na placa
+    //
+    // ENVIO
+    function enviarComando(){
+        var command = $('#comando').val();
+        if(commandInBoard(command)){
+            socket.emit('Comando para Galileo', command);
+        } else {
+            $('#resposta_da_galileo').empty();
+            $('#resposta_da_galileo').append($('<li>').text("A placa não tem este comando"));
+        }
+    }
+    // RESPOSTA
     socket.on('Resposta da Galileo', function (resposta) {
         // limpa listagem das respostas anteriores
         $('#resposta_da_galileo').empty();
-        $('#resposta_da_galileo').append($('<li>').text(resposta + comandos.toString));
+        $('#resposta_da_galileo').append($('<li>').text(resposta));
 
         // "verbaliza" a resposta
         sintese.text = resposta;
         speechSynthesis.speak(sintese);
     });
+
+
+
 
     /**************************************************************************/
     /*                    CODIGO DO RECONHECIMENTO DE VOZ                     */
@@ -196,6 +223,7 @@
                 $('#comando').val('');
             }
         }
+
     }
 
 
