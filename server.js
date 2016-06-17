@@ -90,7 +90,6 @@ io.on('connection', function (socket) {
         for (var i in board.comandos) {
             retorno[j++] = i;
         }
-        console.log(retorno);
         io.emit(returnCommands, JSON.stringify(retorno));
 
     });
