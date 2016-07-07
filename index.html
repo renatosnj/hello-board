@@ -77,7 +77,11 @@
     /**************************************************************************/
 
     // Criando variavel de acesso as funces da biblioteca Socket.io 
-    var socket = io();
+    var socket = io(),
+        // Flag do processo de sugestao
+        suggestionProcess = false,
+        suggestedCommands = null;
+
 
     //
     // Requerendo comandos que estao disponiveis na placa
@@ -98,6 +102,8 @@
         for (var i in boardCommands) {
             if (boardCommands[i] === command){
                 return true;
+            } if (command.indexOf(boardCommands[i]) > -1){
+
             }
         }
         return false;
@@ -208,11 +214,11 @@
 
 
 
-    function suggestThreeCommands(command){
+    function bestCommands(command){
         var result = [], c;
         command = command.trim().toLowerCase();
         for(c in boardCommands){
-            result.push({'key': c, 'value' : levenshtein(boardCommands[c], command)});
+            result.push({'key': c, 'value' : levenshtein(boardCommands[c].trim().toLowerCase(), command.trim().toLowerCase())});
         }
 
         result.sort(function (a,b) {
@@ -222,7 +228,20 @@
                 return 1;
             return 0;
         });
-        return result;
+        suggestedCommands = result;
+    }
+
+    function suggestCommands(){
+        if(suggestedCommands != null) {
+            suggestionProcess = true;
+            sintese.text = "Você quis dizer: \n 1) " + boardCommands[suggestedCommands[0].key] + "? \n 2) " + boardCommands[suggestedCommands[1].key] + "? \n 3) " + boardCommands[suggestedCommands[2].key] + "?\n. Você quis dizer a primeira, segunda ou terceira? \n diga cancelar, para sair";
+
+            $('#resposta_da_galileo').empty();
+            $('#resposta_da_galileo').append("<li>Você quis dizer<ol type='a'><li>" + boardCommands[suggestedCommands[0].key] + "</li>    <li>" + boardCommands[suggestedCommands[1].key] + "</li><li>" + boardCommands[suggestedCommands[2].key] + "</li></ol></li>");
+            speechSynthesis.speak(sintese);
+        } else {
+            throw "No suggested commands.";
+        }
     }
 
     //
@@ -230,13 +249,27 @@
     //
     // ENVIO
     function enviarComando(){
-        var command = $('#comando').val();
+        var command = $('#comando').val().trim().toLowerCase();
+
+        for (var i in boardCommands) {
+            if (boardCommands[i] === command){
+                socket.emit('Comando para Galileo', command);
+            } if (command.indexOf(boardCommands[i]) > -1){
+
+            }
+        }
+
         if(commandInBoard(command)){
             socket.emit('Comando para Galileo', command);
         } else {
-            suggestThreeCommands(command);
-            $('#resposta_da_galileo').empty();
-            $('#resposta_da_galileo').append($('<li>').text("A placa não tem este comando"));
+            bestCommands(command);
+            if(suggestedCommands[0].value <= 2){
+                $('#comando').val(boardCommands[suggestedCommands[0].key]);
+                socket.emit('Comando para Galileo', boardCommands[suggestedCommands[0].key]);
+            } else {
+                suggestionProcess = true;
+                suggestCommands(suggestedCommands);
+            }
         }
     }
     // RESPOSTA
@@ -297,34 +330,62 @@
         document.getElementById('btn_reconhecimento').classList.remove('hidden');
 
         // Definindo como tratar  resultado de um reconhecimento
-        reconhecimento.onresult = function (event) 
-        {
-            /** 
-            * Checando resultado do reconhecimento continuo. O reconhecimento 
-            * continuo dá dois tipos de resultados: o intermediario, onde o 
-            * usuário pode alterar o valor do reconhecimento anterior; e os 
-            * valores finais, onde aquele ja e o recnhecimento considerado como
-            * correto.Neste passo.Foi decidido utilizar os valores de 
-            * reconhecimento intermediario (interin).
-            */  
+        reconhecimento.onresult = function (event) {
+            /**
+             * Checando resultado do reconhecimento continuo. O reconhecimento
+             * continuo dá dois tipos de resultados: o intermediario, onde o
+             * usuário pode alterar o valor do reconhecimento anterior; e os
+             * valores finais, onde aquele ja e o recnhecimento considerado como
+             * correto.Neste passo.Foi decidido utilizar os valores de
+             * reconhecimento intermediario (interin).
+             */
             var interim = "";
             for (var i = 0; i < event.results.length; ++i) {
                 interim = event.results[i][0].transcript;
             }
-            
+
             // Atribuindo comando ao formulario
             $('#comando').val(interim);
-            
+
             /**
-            * Como o reconhecimento esta em modo continuo, para que um comando
-            * seja enviado para o servidor ele deve ser precedido pela string
-            * "Galileu". Esta string foi escolhida por ser o resultado do 
-            * reconhecimento mais comum da verbalização de "Galileo". Tambem 
-            * para dar uma sensacao de personificacao do comando.
-            */
-            if (interim.search("Galileu") != -1) {
+             * Como o reconhecimento esta em modo continuo, para que um comando
+             * seja enviado para o servidor ele deve ser precedido pela string
+             * "Galileu". Esta string foi escolhida por ser o resultado do
+             * reconhecimento mais comum da verbalização de "Galileo". Tambem
+             * para dar uma sensacao de personificacao do comando.
+             *
+             if (interim.search("Galileu") != -1) {
                 socket.emit('Comando para Galileo', interim);
+            }*/
+            if (suggestionProcess) {
+                interim = interim.trim().toLowerCase();
+                if (interim === 'cancelar' | interim.indexOf('cancelar') > -1) {
+                    $('#comando').val('');
+                    $('#resposta_da_galileo').empty();
+                    $('#resposta_da_galileo').append($('<li>').text("Fale um novo comando"));
+                } else if (interim === 'primeira' | interim.indexOf('primeira') > -1) {
+                    $('#comando').val(boardCommands[suggestedCommands[0].key]);
+                    enviarComando();
+                } else if (interim === 'segunda' | interim.indexOf('segunda') > -1) {
+                    $('#comando').val(boardCommands[suggestedCommands[1].key]);
+                    enviarComando();
+                } else if (interim === 'terceira' | interim.indexOf('terceira') > -1) {
+                    $('#comando').val(boardCommands[suggestedCommands[2].key]);
+                    enviarComando();
+                } else {
+                    $('#resposta_da_galileo').empty();
+                    $('#resposta_da_galileo').append($('<li>').text("Não entendemos sua resposta, estamos reiniciando o processo."));
+                }
+                // Reiniciando o processo
+                setTimeout(function () {
+                    suggestionProcess = false;
+                    suggestedCommands = null;
+                    $('#resposta_da_galileo').empty();
+                }, 5000);
+            } else {
+                enviarComando();
             }
+
         }
 
         // Definicoes iniciais do ambiente para o reconhecimento 
