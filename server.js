@@ -21,6 +21,9 @@ app.get('/', function (req, res) {
     res.sendFile(dirname + '/index.html');
 });
 
+app.get('/lvenshtein.js', function (req, res) {res.sendFile(dirname + '/lvenshtein.js');});
+
+
 // Retornando pagina de Debug
 app.get('/debug', function (req, res) {
         var i = 0;

@@ -7,6 +7,7 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
     <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="//cdn.socket.io/socket.io-1.2.0.js"></script>
+    <script src="/lvenshtein.js"></script>
     <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css"
           rel="stylesheet" type="text/css">
     <link href="//pingendo.github.io/pingendo-bootstrap/themes/default/bootstrap.css"
@@ -111,114 +112,12 @@
 
 
 
-    /**************************************************************************/
-    /*               ALGORITMO DA DISTANCIA DE lEVENSHTEIN                    */
-    /**************************************************************************/
-    // FONNTE: http://stackoverflow.com/a/35279162
-    function levenshtein(s, t) {
-        if (s === t) {
-            return 0;
-        }
-        var n = s.length, m = t.length;
-        if (n === 0 || m === 0) {
-            return n + m;
-        }
-        var x = 0, y, a, b, c, d, g, h;
-        var p = new Uint16Array(n);
-        var u = new Uint32Array(n);
-        for (y = 0; y < n;) {
-            u[y] = s.charCodeAt(y);
-            p[y] = ++y;
-        }
-
-        for (; (x + 3) < m; x += 4) {
-            var e1 = t.charCodeAt(x);
-            var e2 = t.charCodeAt(x + 1);
-            var e3 = t.charCodeAt(x + 2);
-            var e4 = t.charCodeAt(x + 3);
-            c = x;
-            b = x + 1;
-            d = x + 2;
-            g = x + 3;
-            h = x + 4;
-            for (y = 0; y < n; y++) {
-                a = p[y];
-                if (a < c || b < c) {
-                    c = (a > b ? b + 1 : a + 1);
-                }
-                else {
-                    if (e1 !== u[y]) {
-                        c++;
-                    }
-                }
-
-                if (c < b || d < b) {
-                    b = (c > d ? d + 1 : c + 1);
-                }
-                else {
-                    if (e2 !== u[y]) {
-                        b++;
-                    }
-                }
-
-                if (b < d || g < d) {
-                    d = (b > g ? g + 1 : b + 1);
-                }
-                else {
-                    if (e3 !== u[y]) {
-                        d++;
-                    }
-                }
-
-                if (d < g || h < g) {
-                    g = (d > h ? h + 1 : d + 1);
-                }
-                else {
-                    if (e4 !== u[y]) {
-                        g++;
-                    }
-                }
-                p[y] = h = g;
-                g = d;
-                d = b;
-                b = c;
-                c = a;
-            }
-        }
-
-        for (; x < m;) {
-            var e = t.charCodeAt(x);
-            c = x;
-            d = ++x;
-            for (y = 0; y < n; y++) {
-                a = p[y];
-                if (a < c || d < c) {
-                    d = (a > d ? d + 1 : a + 1);
-                }
-                else {
-                    if (e !== u[y]) {
-                        d = c + 1;
-                    }
-                    else {
-                        d = c;
-                    }
-                }
-                p[y] = d;
-                c = a;
-            }
-            h = d;
-        }
-
-        return h;
-    }
-
-
 
     function bestCommands(command){
         var result = [], c;
         command = command.trim().toLowerCase();
         for(c in boardCommands){
-            result.push({'key': c, 'value' : levenshtein(boardCommands[c].trim().toLowerCase(), command.trim().toLowerCase())});
+            result.push({'key': c, 'value' : distanceLvenshtein(boardCommands[c].trim().toLowerCase(), command.trim().toLowerCase())});
         }
 
         result.sort(function (a,b) {
@@ -248,6 +147,39 @@
     // Execucao de comandos na placa
     //
     // ENVIO
+    function avaliarComando(interim){
+
+        if (suggestionProcess) {
+            interim = interim.trim().toLowerCase();
+            if (interim === 'cancelar' | interim.indexOf('cancelar') > -1) {
+                $('#comando').val('');
+                $('#resposta_da_galileo').empty();
+                $('#resposta_da_galileo').append($('<li>').text("Fale um novo comando"));
+            } else if (interim === 'primeira' | interim.indexOf('primeira') > -1) {
+                $('#comando').val(boardCommands[suggestedCommands[0].key]);
+                enviarComando();
+            } else if (interim === 'segunda' | interim.indexOf('segunda') > -1) {
+                $('#comando').val(boardCommands[suggestedCommands[1].key]);
+                enviarComando();
+            } else if (interim === 'terceira' | interim.indexOf('terceira') > -1) {
+                $('#comando').val(boardCommands[suggestedCommands[2].key]);
+                enviarComando();
+            } else {
+                $('#resposta_da_galileo').empty();
+                $('#resposta_da_galileo').append($('<li>').text("Não entendemos sua resposta, estamos reiniciando o processo."));
+            }
+            // Reiniciando o processo em 5 segundos
+            setTimeout(function () {
+                suggestionProcess = false;
+                suggestedCommands = null;
+                $('#resposta_da_galileo').empty();
+            }, 5000);
+        } else {
+            enviarComando();
+        }
+    };
+
+
     function enviarComando(){
         var command = $('#comando').val().trim().toLowerCase();
 
@@ -287,7 +219,7 @@
 
 
     /**************************************************************************/
-    /*                    CODIGO DO RECONHECIMENTO DE VOZ                     */
+    /*                         RECONHECIMENTO DE VOZ                           */
     /**************************************************************************/
     
     // Verficando a existencia de uma biblioteca de reconhecimento
@@ -335,8 +267,8 @@
              * Checando resultado do reconhecimento continuo. O reconhecimento
              * continuo dá dois tipos de resultados: o intermediario, onde o
              * usuário pode alterar o valor do reconhecimento anterior; e os
-             * valores finais, onde aquele ja e o recnhecimento considerado como
-             * correto.Neste passo.Foi decidido utilizar os valores de
+             * valores finais, onde aquele ja e o reconhecimento considerado como
+             * correto. Neste passp Foi decidido utilizar os valores de
              * reconhecimento intermediario (interin).
              */
             var interim = "";
@@ -344,48 +276,9 @@
                 interim = event.results[i][0].transcript;
             }
 
-            // Atribuindo comando ao formulario
+            // Atribuindo comando ao formulario e fazendo análise do comando
             $('#comando').val(interim);
-
-            /**
-             * Como o reconhecimento esta em modo continuo, para que um comando
-             * seja enviado para o servidor ele deve ser precedido pela string
-             * "Galileu". Esta string foi escolhida por ser o resultado do
-             * reconhecimento mais comum da verbalização de "Galileo". Tambem
-             * para dar uma sensacao de personificacao do comando.
-             *
-             if (interim.search("Galileu") != -1) {
-                socket.emit('Comando para Galileo', interim);
-            }*/
-            if (suggestionProcess) {
-                interim = interim.trim().toLowerCase();
-                if (interim === 'cancelar' | interim.indexOf('cancelar') > -1) {
-                    $('#comando').val('');
-                    $('#resposta_da_galileo').empty();
-                    $('#resposta_da_galileo').append($('<li>').text("Fale um novo comando"));
-                } else if (interim === 'primeira' | interim.indexOf('primeira') > -1) {
-                    $('#comando').val(boardCommands[suggestedCommands[0].key]);
-                    enviarComando();
-                } else if (interim === 'segunda' | interim.indexOf('segunda') > -1) {
-                    $('#comando').val(boardCommands[suggestedCommands[1].key]);
-                    enviarComando();
-                } else if (interim === 'terceira' | interim.indexOf('terceira') > -1) {
-                    $('#comando').val(boardCommands[suggestedCommands[2].key]);
-                    enviarComando();
-                } else {
-                    $('#resposta_da_galileo').empty();
-                    $('#resposta_da_galileo').append($('<li>').text("Não entendemos sua resposta, estamos reiniciando o processo."));
-                }
-                // Reiniciando o processo
-                setTimeout(function () {
-                    suggestionProcess = false;
-                    suggestedCommands = null;
-                    $('#resposta_da_galileo').empty();
-                }, 5000);
-            } else {
-                enviarComando();
-            }
-
+            avaliarComando(interim);
         }
 
         // Definicoes iniciais do ambiente para o reconhecimento 
