@@ -74,20 +74,17 @@
 <script>
 
     /**************************************************************************/
-    /*                CODIGO DE ENVIO E RECEBIMENTO DE COMANDOS               */
+    /*                            INICIALIZACAO                               */
     /**************************************************************************/
-
-    // Criando variavel de acesso as funces da biblioteca Socket.io 
+    // Criando variaveis globais
     var socket = io(),
         // Flag do processo de sugestao
-        suggestionProcess = false,
-        suggestedCommands = null;
-
-
+        inSuggestionProcess = false,
+        suggestedCommands = null,
+        boardCommands;
     //
     // Requerendo comandos que estao disponiveis na placa
     //
-    var boardCommands;
     // ENVIO
     socket.emit('Comandos');
     // RESPOSTA
@@ -96,28 +93,33 @@
     });
 
 
-
-    function commandInBoard(command){
-        command = command.trim().toLowerCase();
-
-        for (var i in boardCommands) {
-            if (boardCommands[i] === command){
-                return true;
-            } if (command.indexOf(boardCommands[i]) > -1){
-
-            }
+    /**************************************************************************/
+    /*                   PROCESSO DE SUGESTAO DE COMANDOS                     */
+    /**************************************************************************/
+    // Inicia processo de sugestao de comandos
+    function suggestCommands(command) {
+        // Calcula a proximidade do comando com os da placa
+        bestCommands(command);
+        // Se a distancia por pequena (<=2), envia comando sugerido
+        if (suggestedCommands[0].value <= 2) {
+            $('#comando').val(boardCommands[suggestedCommands[0].key]);
+            socket.emit('Comando para Galileo', boardCommands[suggestedCommands[0].key]);
+        // Caso contrario entra no processo de sugestao
+        } else {
+            inSuggestionProcess = true;
+            speakSuggestCommands(suggestedCommands);
         }
-        return false;
     }
-
-
-
-
+    // Gera um array ordenado com os comandos da placa mais proximos do falado
     function bestCommands(command){
         var result = [], c;
         command = command.trim().toLowerCase();
         for(c in boardCommands){
-            result.push({'key': c, 'value' : distanceLvenshtein(boardCommands[c].trim().toLowerCase(), command.trim().toLowerCase())});
+            result.push({
+                'key'   : c,
+                'value' : distanceLvenshtein(boardCommands[c].trim().toLowerCase(),
+                        command.trim().toLowerCase())
+            });
         }
 
         result.sort(function (a,b) {
@@ -129,81 +131,95 @@
         });
         suggestedCommands = result;
     }
+    // Interpretando comandos da sugestao de voz
+    function evalCommandsInSuggestionProcess(interim) {
+        interim = interim.trim().toLowerCase();
 
-    function suggestCommands(){
+        if (interim === 'cancelar' | interim.indexOf('cancelar') > -1) {
+            $('#comando').val('');
+            $('#resposta_da_galileo').empty();
+            $('#resposta_da_galileo').append($('<li>').text("Fale um novo comando"));
+
+        } else if (interim === 'primeira' | interim.indexOf('primeira') > -1) {
+            $('#comando').val(boardCommands[suggestedCommands[0].key]);
+            inSuggestionProcess = false;
+            enviarComando();
+            return;
+
+        } else if (interim === 'segunda' | interim.indexOf('segunda') > -1) {
+            $('#comando').val(boardCommands[suggestedCommands[1].key]);
+            inSuggestionProcess = false;
+            enviarComando();
+            return;
+
+        } else if (interim === 'terceira' | interim.indexOf('terceira') > -1) {
+            $('#comando').val(boardCommands[suggestedCommands[2].key]);
+            inSuggestionProcess = false;
+            enviarComando();
+            return;
+
+        } else {
+            $('#resposta_da_galileo').empty();
+            $('#resposta_da_galileo').append($('<li>').text("Não entendemos sua resposta, estamos reiniciando o processo."));
+        }
+
+        // Reiniciando o processo em 5 segundos
+        setTimeout(function () {
+            inSuggestionProcess = false;
+            suggestedCommands = null;
+            $('#resposta_da_galileo').empty();
+        }, 5000);
+    }
+    // Sintetiza comandos mais proximos do falado
+    function speakSuggestCommands(){
         if(suggestedCommands != null) {
-            suggestionProcess = true;
-            sintese.text = "Você quis dizer: \n 1) " + boardCommands[suggestedCommands[0].key] + "? \n 2) " + boardCommands[suggestedCommands[1].key] + "? \n 3) " + boardCommands[suggestedCommands[2].key] + "?\n. Você quis dizer a primeira, segunda ou terceira? \n diga cancelar, para sair";
+            inSuggestionProcess = true;
+            sintese.text = "Você quis dizer: \n 1) " +
+                    boardCommands[suggestedCommands[0].key] +
+                    "? \n 2) " + boardCommands[suggestedCommands[1].key] +
+                    "? \n 3) " + boardCommands[suggestedCommands[2].key] +
+                    "?\n. Você quis dizer a \"primeira\", \"segunda\" ou \"terceira\" opção?"+
+                    " \n diga \"cancelar\", para sair";
 
             $('#resposta_da_galileo').empty();
-            $('#resposta_da_galileo').append("<li>Você quis dizer<ol type='a'><li>" + boardCommands[suggestedCommands[0].key] + "</li>    <li>" + boardCommands[suggestedCommands[1].key] + "</li><li>" + boardCommands[suggestedCommands[2].key] + "</li></ol></li>");
+            $('#resposta_da_galileo').append("<li>Você quis dizer<ol type='I'><li>" +
+                    boardCommands[suggestedCommands[0].key] + "</li>    <li>" +
+                    boardCommands[suggestedCommands[1].key] + "</li><li>" +
+                    boardCommands[suggestedCommands[2].key] + "</li></ol></li>");
             speechSynthesis.speak(sintese);
         } else {
             throw "No suggested commands.";
         }
     }
 
-    //
-    // Execucao de comandos na placa
-    //
-    // ENVIO
-    function avaliarComando(interim){
 
-        if (suggestionProcess) {
-            interim = interim.trim().toLowerCase();
-            if (interim === 'cancelar' | interim.indexOf('cancelar') > -1) {
-                $('#comando').val('');
-                $('#resposta_da_galileo').empty();
-                $('#resposta_da_galileo').append($('<li>').text("Fale um novo comando"));
-            } else if (interim === 'primeira' | interim.indexOf('primeira') > -1) {
-                $('#comando').val(boardCommands[suggestedCommands[0].key]);
-                enviarComando();
-            } else if (interim === 'segunda' | interim.indexOf('segunda') > -1) {
-                $('#comando').val(boardCommands[suggestedCommands[1].key]);
-                enviarComando();
-            } else if (interim === 'terceira' | interim.indexOf('terceira') > -1) {
-                $('#comando').val(boardCommands[suggestedCommands[2].key]);
-                enviarComando();
-            } else {
-                $('#resposta_da_galileo').empty();
-                $('#resposta_da_galileo').append($('<li>').text("Não entendemos sua resposta, estamos reiniciando o processo."));
+    /**************************************************************************/
+    /*        PROCESSO DE ENVIO DE COMANDOS E TRATAMENTO DE RESPOSTA          */
+    /**************************************************************************/
+    function evalCommand(command){
+
+        if ( inSuggestionProcess ) {
+            evalCommandsInSuggestionProcess(command);
+        } else  {
+            for (var i in boardCommands) {
+                if ( boardCommands[i] === command ) {
+                    socket.emit('Comando para Galileo', command);
+                    return;
+                }
+                if ( command.indexOf(boardCommands[i]) > -1 ){
+                    $('#comando').val(boardCommands[i]);
+                    socket.emit('Comando para Galileo', boardCommands[i]);
+                    return;
+                }
             }
-            // Reiniciando o processo em 5 segundos
-            setTimeout(function () {
-                suggestionProcess = false;
-                suggestedCommands = null;
-                $('#resposta_da_galileo').empty();
-            }, 5000);
-        } else {
-            enviarComando();
+            suggestCommands(command);
         }
     };
-
-
     function enviarComando(){
         var command = $('#comando').val().trim().toLowerCase();
-
-        for (var i in boardCommands) {
-            if (boardCommands[i] === command){
-                socket.emit('Comando para Galileo', command);
-            } if (command.indexOf(boardCommands[i]) > -1){
-
-            }
-        }
-
-        if(commandInBoard(command)){
-            socket.emit('Comando para Galileo', command);
-        } else {
-            bestCommands(command);
-            if(suggestedCommands[0].value <= 2){
-                $('#comando').val(boardCommands[suggestedCommands[0].key]);
-                socket.emit('Comando para Galileo', boardCommands[suggestedCommands[0].key]);
-            } else {
-                suggestionProcess = true;
-                suggestCommands(suggestedCommands);
-            }
-        }
+        evalCommand(command);
     }
+
     // RESPOSTA
     socket.on('Resposta da Galileo', function (resposta) {
         // limpa listagem das respostas anteriores
@@ -278,7 +294,7 @@
 
             // Atribuindo comando ao formulario e fazendo análise do comando
             $('#comando').val(interim);
-            avaliarComando(interim);
+            evalCommand(interim);
         }
 
         // Definicoes iniciais do ambiente para o reconhecimento 
