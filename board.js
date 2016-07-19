@@ -15,7 +15,6 @@ var fs = require('fs'),
 // Variavel auxiliar de enredecamento para testes fora da placa
     dirname = __dirname,
     root = dirname + '/root',
-//var temp_url = dirname + '/temp.txt'
 
 // Definicoes dos pinos (Funcao x Pino)
     sensor = 37,
@@ -153,6 +152,10 @@ exports.inicializarPlaca = function () {
 
     console.log("Placa configurada com sucesso.");
 };
+
+//
+// Funcoes de execucao e mensagens de resposta dos comandos
+//
 var ligarLed = function () {
     writeGpio(led, '1');
     return "Ligando LED da Galileu";
@@ -173,11 +176,14 @@ var lerLED = function () {
     }
 };
 
+//
+// Definindo Tabela de comandos-funcao
+//
 exports.comandos = {
     'galileu desligar' : desligarLed,
     'galileu ligar' : ligarLed,
     'galileu temperatura' : lerSensor,
     'galileu led': lerLED
 };
-
+// Lista de funções de debug
 exports.debugger = [lerLED,lerSensor];

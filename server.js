@@ -21,6 +21,7 @@ app.get('/', function (req, res) {
     res.sendFile(dirname + '/index.html');
 });
 
+// Retornando modulo da distancia de lvenshtein
 app.get('/lvenshtein.js', function (req, res) {res.sendFile(dirname + '/lvenshtein.js');});
 
 
@@ -46,6 +47,9 @@ app.get('/debug', function (req, res) {
     res.end();
 });
 
+/**
+ * Identifica se esta  no ambiente PC/Placa ou em Nuvem(c9.io)
+ */
 if (process.env.PORT !== undefined) {
     // Inicie o servidor ouvindo na porta 3000
     http.listen(process.env.PORT, process.env.IP, function () {
@@ -57,6 +61,9 @@ if (process.env.PORT !== undefined) {
         console.log('Servidor iniciado.\nAceitando requisicoes na porta 3000.');
     });
 }
+
+// Executando configuracoes de inicializacao da placa
+board.inicializarPlaca();
 
 /******************************************************************************/
 /*                TRATANDO CONEXOES COM O SEVIDOR SOCKET.IO                   */

@@ -85,7 +85,7 @@
     //
     // Requerendo comandos que estao disponiveis na placa
     //
-    // ENVIO
+    // REQUISICAO
     socket.emit('Comandos');
     // RESPOSTA
     socket.on('Comandos da placa', function (resposta) {
@@ -196,6 +196,7 @@
     /**************************************************************************/
     /*        PROCESSO DE ENVIO DE COMANDOS E TRATAMENTO DE RESPOSTA          */
     /**************************************************************************/
+    // REQUISICAO
     function evalCommand(command){
 
         if ( inSuggestionProcess ) {
@@ -237,7 +238,8 @@
     /**************************************************************************/
     /*                         RECONHECIMENTO DE VOZ                           */
     /**************************************************************************/
-    
+    // Estar parte do codigo e explicada na documentacao da Web Speech API
+
     // Verficando a existencia de uma biblioteca de reconhecimento
     window.SpeechRecognition = window.SpeechRecognition ||
             window.webkitSpeechRecognition || null;
